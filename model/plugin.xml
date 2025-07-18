@@ -9,7 +9,7 @@
    <extension point="org.eclipse.emf.ecore.generated_package">
       <!-- @generated model -->
       <package
-            uri="http://vitruv.tools/methodologisttemplate/model"
+            uri="http://vitruv.tools/reactionsparser/model"
             class="tools.vitruv.methodologisttemplate.model.model.ModelPackage"
             genModel="src/main/ecore/model.genmodel"/>
    </extension>
@@ -17,7 +17,7 @@
    <extension point="org.eclipse.emf.ecore.generated_package">
       <!-- @generated model2 -->
       <package
-            uri="http://vitruv.tools/methodologisttemplate/model2"
+            uri="http://vitruv.tools/reactionsparser/model2"
             class="tools.vitruv.methodologisttemplate.model.model2.Model2Package"
             genModel="src/main/ecore/model2.genmodel"/>
    </extension>

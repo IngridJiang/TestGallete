@@ -2,30 +2,46 @@ package tools.vitruv.methodologisttemplate.vsum;
 
 import tools.vitruv.framework.vsum.VirtualModelBuilder;
 import tools.vitruv.framework.vsum.internal.InternalVirtualModel;
-import tools.vitruv.methodologisttemplate.model.model.ModelFactory;
-import tools.vitruv.methodologisttemplate.model.model2.Root;
+import tools.vitruv.methodologisttemplate.model.model2.Model2Factory;
+import tools.vitruv.methodologisttemplate.model.model.AscetModule;
+import tools.vitruv.change.interaction.UserInteractor;
+import tools.vitruv.change.interaction.UserInteractionOptions.WindowModality;
+import tools.vitruv.framework.vsum.internal.VirtualModelImpl;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.nio.file.Files;  
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.Map;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
+import org.eclipse.emf.ecore.xmi.XMLResource;
+import org.eclipse.emf.ecore.EObject;  
+import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import mir.reactions.model2Model2.Model2Model2ChangePropagationSpecification;
+import mir.reactions.amalthea2ascet.Amalthea2ascetChangePropagationSpecification;
 import tools.vitruv.change.propagation.ChangePropagationMode;
 import tools.vitruv.change.testutils.TestUserInteraction;
 import tools.vitruv.framework.views.CommittableView;
 import tools.vitruv.framework.views.View;
 import tools.vitruv.framework.views.ViewTypeFactory;
 import tools.vitruv.framework.vsum.VirtualModel;
-import tools.vitruv.methodologisttemplate.model.model.System;
+import tools.vitruv.framework.vsum.internal.InternalVirtualModel;
+import tools.vitruv.methodologisttemplate.model.model2.ComponentContainer;
 
 /**
  * This class provides an example how to define and use a VSUM.
@@ -38,88 +54,74 @@ public class VSUMExampleTest {
   }
 
   @Test
-  void systemInsertionAndPropagationTest(@TempDir Path tempDir) {
+  void componentContainerInsertionAndPropagationTest(@TempDir Path tempDir) {
     VirtualModel vsum = createDefaultVirtualModel(tempDir);
-    addSystem(vsum, tempDir);
+    addComponentContainer(vsum, tempDir);
     // assert that the directly added System is present
-    Assertions.assertEquals(1, getDefaultView(vsum, List.of(System.class)).getRootObjects().size());
+    Assertions.assertEquals(1, getDefaultView(vsum, List.of(ComponentContainer.class)).getRootObjects().size());
     // as well as the Root that should be created by the Reactions, see templateReactions.reactions#14
-    Assertions.assertEquals(1, getDefaultView(vsum, List.of(Root.class)).getRootObjects().size());
+    Assertions.assertEquals(1, getDefaultView(vsum, List.of(AscetModule.class)).getRootObjects().size());
   }
 
   @Test
-  void insertComponent(@TempDir Path tempDir) {
+  void insertTask(@TempDir Path tempDir) {
     InternalVirtualModel vsum = createDefaultVirtualModel(tempDir);
-    addSystem(vsum, tempDir);
-    addComponent(vsum);
-    Assertions.assertTrue(assertView(getDefaultView(vsum, List.of(System.class, Root.class)), (View v) -> {
-      // assert that a component has been inserted, a entity has been created and that both have the same name
-      // Note: to make the test result easier to understand, these different effects should be tested one by one
-      return v.getRootObjects(System.class).iterator().next()
-        .getComponents().get(0).getName()
-        .equals(v.getRootObjects(Root.class).iterator().next()
-        .getEntities().get(0).getName());
+    addComponentContainer(vsum, tempDir);
+    addTask(vsum);
+    Assertions.assertTrue(assertView(getDefaultView(vsum, List.of(ComponentContainer.class, AscetModule.class)), (View v) -> {
+       //assert that a component has been inserted, a entity has been created and that both have the same name
+       //Note: to make the test result easier to understand, these different effects should be tested one by one
+       return v.getRootObjects(ComponentContainer.class).iterator().next()
+        .getTasks().get(0).getName()
+        .equals(v.getRootObjects(AscetModule.class).iterator().next()
+        .getTasks().get(0).getName());
     }));
-  }
+    try {
+    Path outDir = Paths.get("target", "generated-models");
+    Files.createDirectories(outDir);
+    mergeAndSave(vsum, outDir, "vsum.xmi");
 
-  @Test
-  void renameComponent(@TempDir Path tempDir) {
-    final String newName = "newName";
-    VirtualModel vsum = createDefaultVirtualModel(tempDir);
-    addSystem(vsum, tempDir);
-    addComponent(vsum);
-    modifyView(getDefaultView(vsum, List.of(System.class)).withChangeDerivingTrait(), (CommittableView v) -> {
-      // change the name of the component
-      v.getRootObjects(System.class).iterator().next().getComponents().get(0).setName(newName);
-    });
-    Assertions.assertTrue(assertView(getDefaultView(vsum, List.of(System.class, Root.class)), (View v) -> {
-      // assert that the renaming worked on the component as well as the corresponding entity
-      return v.getRootObjects(System.class).iterator().next()
-        .getComponents().get(0).getName().equals(newName) 
-        && v.getRootObjects(Root.class).iterator().next()
-        .getEntities().get(0).getName().equals(newName);
-    }));
-  }
+for (Resource r : vsum.getViewSourceModels()) {
+    Path src = Paths.get(java.net.URI.create(r.getURI().toString()));   
+    Path dest = outDir.resolve(src.getFileName());
+    Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
+}
 
-  @Test
-  void deleteComponent(@TempDir Path tempDir) {
-    VirtualModel vsum = createDefaultVirtualModel(tempDir);
-    addSystem(vsum, tempDir);
-    addComponent(vsum);
-    modifyView(getDefaultView(vsum, List.of(System.class)).withChangeDerivingTrait(), (CommittableView v) -> {
-      v.getRootObjects(System.class).iterator().next().getComponents().remove(0);
-    });
-    Assertions.assertTrue(assertView(getDefaultView(vsum, List.of(System.class, Root.class)), (View v) -> {
-      // assert that the deletion of the component worked and that the corresponding entity also got deleted
-      return v.getRootObjects(System.class).iterator().next().getComponents().isEmpty() 
-      && v.getRootObjects(Root.class).iterator().next().getEntities().isEmpty();
-    }));
-  }
+    } catch (IOException e) {
+    Assertions.fail("Could not save generated model", e);
+    }
 
-  private void addSystem(VirtualModel vsum, Path projectPath) {
-    CommittableView view = getDefaultView(vsum, List.of(System.class)).withChangeDerivingTrait();
+  }
+ 
+private void addComponentContainer(VirtualModel vsum, Path projectPath) {
+    CommittableView view = getDefaultView(vsum, List.of(ComponentContainer.class)).withChangeDerivingTrait();
     modifyView(view, (CommittableView v) -> {
       v.registerRoot(
-          ModelFactory.eINSTANCE.createSystem(),
+          Model2Factory.eINSTANCE.createComponentContainer(),
           URI.createFileURI(projectPath.toString() + "/example.model"));
     });
 
   }
 
-  private void addComponent(VirtualModel vsum) {
-    CommittableView view = getDefaultView(vsum, List.of(System.class)).withChangeDerivingTrait();
+  private void addTask(VirtualModel vsum) {
+    CommittableView view = getDefaultView(vsum, List.of(ComponentContainer.class)).withChangeDerivingTrait();
     modifyView(view, (CommittableView v) -> {
-      var component = ModelFactory.eINSTANCE.createComponent();
-      component.setName("specialname");
-      v.getRootObjects(System.class).iterator().next().getComponents().add(component);
+      var task = Model2Factory.eINSTANCE.createTask();
+      task.setName("specialname");
+      v.getRootObjects(ComponentContainer.class).iterator().next().getTasks().add(task);
     });
   }
 
+
   private InternalVirtualModel createDefaultVirtualModel(Path projectPath) {
+    var userInteractor = new TestUserInteraction();
+    userInteractor.addNextSingleSelection(0);
+    
+
     InternalVirtualModel model = new VirtualModelBuilder()
-        .withStorageFolder(projectPath)
-        .withUserInteractorForResultProvider(new TestUserInteraction.ResultProvider(new TestUserInteraction()))
-        .withChangePropagationSpecifications(new Model2Model2ChangePropagationSpecification())
+        .withStorageFolder(projectPath) 
+        .withUserInteractorForResultProvider(new TestUserInteraction.ResultProvider(userInteractor))
+        .withChangePropagationSpecifications(new Amalthea2ascetChangePropagationSpecification())
         .buildAndInitialize();
     model.setChangePropagationMode(ChangePropagationMode.TRANSITIVE_CYCLIC);
     return model;
@@ -143,5 +145,30 @@ public class VSUMExampleTest {
   private boolean assertView(View view, Function<View, Boolean> viewAssertionFunction) {
     return viewAssertionFunction.apply(view);
   }
+
+private static void mergeAndSave(InternalVirtualModel vm,
+                                 Path outDir,
+                                 String fileName) throws IOException {
+
+    Files.createDirectories(outDir);
+
+    ResourceSet rs = new ResourceSetImpl();
+    URI mergedUri = URI.createFileURI(outDir.resolve(fileName).toString());
+    Resource merged = rs.createResource(mergedUri);
+
+
+    for (Resource src : vm.getViewSourceModels()) {
+        for (EObject obj : src.getContents()) {
+            merged.getContents().add(EcoreUtil.copy(obj));
+        }
+    }
+
+    Map<String, Object> opts = Map.of(
+        XMLResource.OPTION_ENCODING, "UTF-8",
+        XMLResource.OPTION_FORMATTED, Boolean.TRUE,
+        XMLResource.OPTION_SCHEMA_LOCATION, Boolean.TRUE
+    );
+    merged.save(opts);
+}
 
 }

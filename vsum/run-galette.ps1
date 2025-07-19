@@ -1,8 +1,8 @@
 
-$javaHome = "C:\Users\10239\galette\instrumented-jdk-17"
-$agentJar = "C:\Users\10239\galette\galette-agent\target\galette-agent-1.0.0-SNAPSHOT.jar"
-$classes = "C:\Users\10239\Amathea-acset\vsum\target\classes"
-$cpFile = "C:\Users\10239\Amathea-acset\vsum\target\classpath.txt"
+$javaHome = "C:\Users\Anne Koziolek\galette\instrumented-jdk-17"
+$agentJar = "C:\Users\Anne Koziolek\Documents\code-GitHub\galette-concolic-model-transformation\galette-agent\target\galette-agent-1.0.0-SNAPSHOT.jar"
+$classes = "C:\Users\Anne Koziolek\Documents\code-GitHub\TestGallete\vsum\target\classes"
+$cpFile = "C:\Users\Anne Koziolek\Documents\code-GitHub\TestGallete\vsum\target\classpath.txt"
 
 
 $deps = Get-Content -Raw $cpFile

@@ -1,8 +1,16 @@
 
-$javaHome = "C:\Users\Anne Koziolek\galette\instrumented-jdk-17"
-$agentJar = "C:\Users\Anne Koziolek\Documents\code-GitHub\galette-concolic-model-transformation\galette-agent\target\galette-agent-1.0.0-SNAPSHOT.jar"
-$classes = "C:\Users\Anne Koziolek\Documents\code-GitHub\TestGallete\vsum\target\classes"
-$cpFile = "C:\Users\Anne Koziolek\Documents\code-GitHub\TestGallete\vsum\target\classpath.txt"
+# Configuration - Update these paths for your environment
+$javaHome = $env:INSTRUMENTED_JAVA_HOME
+if (-not $javaHome) {
+    Write-Host "Please set INSTRUMENTED_JAVA_HOME environment variable to your Galette-instrumented JDK path"
+    Write-Host "Example: setx INSTRUMENTED_JAVA_HOME 'C:\path\to\instrumented-jdk-17'"
+    exit 1
+}
+
+$projectRoot = Split-Path $PSScriptRoot -Parent
+$agentJar = "$projectRoot\..\galette-concolic-model-transformation\galette-agent\target\galette-agent-1.0.0-SNAPSHOT.jar"
+$classes = "$PSScriptRoot\target\classes"
+$cpFile = "$PSScriptRoot\target\classpath.txt"
 
 
 $deps = Get-Content -Raw $cpFile
